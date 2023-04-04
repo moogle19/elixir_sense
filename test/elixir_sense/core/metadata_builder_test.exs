@@ -3938,135 +3938,137 @@ defmodule ElixirSense.Core.MetadataBuilderTest do
     # submofule func and macro extraction is not supported in `__using__/1`
 
     assert %{
-             {InheritMod, :handle_call, 3} => %ModFunInfo{
-               params: [
-                 [
-                   {:msg, _, ElixirSenseExample.ExampleBehaviour},
-                   {:_from, _, ElixirSenseExample.ExampleBehaviour},
-                   {:state, _, ElixirSenseExample.ExampleBehaviour}
-                 ]
-               ],
-               positions: [{2, 3}],
-               type: :def
-             },
-             {InheritMod, :handle_call, nil} => %ModFunInfo{},
-             {InheritMod, nil, nil} => %ModFunInfo{
-               params: [nil, nil],
-               positions: [{2, 3}, {1, 11}],
-               type: :defmodule
-             },
-             {InheritMod, :private_func, 0} => %ModFunInfo{
-               params: [[]],
-               positions: [{2, 3}],
-               type: :defp
-             },
-             {InheritMod, :private_func_arg, 1} => %ModFunInfo{
-               params: [
-                 [{:\\, _, [{:a, _, ElixirSenseExample.ExampleBehaviour}, nil]}],
-                 [{:a, _, ElixirSenseExample.ExampleBehaviour}]
-               ],
-               positions: [{2, 3}, {2, 3}],
-               type: :defp
-             },
-             {InheritMod, :private_guard, 0} => %ModFunInfo{
-               params: [[]],
-               positions: [{2, 3}],
-               type: :defguardp
-             },
-             {InheritMod, :private_guard_arg, 1} => %ModFunInfo{
-               params: [
-                 [
-                   {:a, _, ElixirSenseExample.ExampleBehaviour}
-                 ]
-               ],
-               positions: [{2, 3}],
-               type: :defguardp
-             },
-             {InheritMod, :private_macro, 0} => %ModFunInfo{
-               params: [[]],
-               positions: [{2, 3}],
-               type: :defmacrop
-             },
-             {InheritMod, :private_macro_arg, 1} => %ModFunInfo{
-               params: [
-                 [
-                   {:a, _, ElixirSenseExample.ExampleBehaviour}
-                 ]
-               ],
-               positions: [{2, 3}],
-               type: :defmacrop
-             },
-             {InheritMod, :public_func, 0} => %ModFunInfo{
-               params: [[]],
-               positions: [{2, 3}],
-               type: :def,
-               overridable: {true, ElixirSenseExample.ExampleBehaviour}
-             },
-             {InheritMod, :public_func_arg, 2} => %ModFunInfo{
-               params: [
-                 [
-                   {:b, _, ElixirSenseExample.ExampleBehaviour},
-                   {:\\, [keep: {"test/support/example_behaviour.ex", 121}],
-                    [
-                      {:a, _, ElixirSenseExample.ExampleBehaviour},
-                      "def"
-                    ]}
-                 ]
-               ],
-               positions: [{2, 3}],
-               type: :def
-             },
-             {InheritMod, :public_guard, 0} => %ModFunInfo{
-               params: [[]],
-               positions: [{2, 3}],
-               type: :defguard
-             },
-             {InheritMod, :public_guard_arg, 1} => %ModFunInfo{
-               params: [
-                 [
-                   {:a, _, ElixirSenseExample.ExampleBehaviour}
-                 ]
-               ],
-               positions: [{2, 3}],
-               type: :defguard
-             },
-             {InheritMod, :public_macro, 0} => %ModFunInfo{
-               params: [[]],
-               positions: [{2, 3}],
-               type: :defmacro
-             },
-             {InheritMod, :public_macro_arg, 1} => %ModFunInfo{
-               params: [
-                 [
-                   {:a, _, ElixirSenseExample.ExampleBehaviour}
-                 ]
-               ],
-               positions: [{2, 3}],
-               type: :defmacro
-             },
-             {InheritMod.Deeply.Nested, nil, nil} => %ModFunInfo{
-               params: [nil],
-               positions: [{2, 3}],
-               type: :defmodule
-             },
-             {InheritMod.Nested, nil, nil} => %ModFunInfo{
-               params: [nil],
-               positions: [{2, 3}],
-               type: :defmodule
-             },
-             {InheritMod.ProtocolEmbedded, nil, nil} => %ModFunInfo{
-               params: [nil],
-               positions: [{2, 3}],
-               type: :defmodule
-             },
-             {InheritMod, :behaviour_info, 1} => %ModFunInfo{
-               params: [[{:atom, [line: 2, column: 3], nil}]],
-               positions: [{2, 3}],
-               target: nil,
-               type: :def
-             },
-             {InheritMod.ProtocolEmbedded, :module_info, 1} => %ModFunInfo{}
-           } = state.mods_funs_to_positions
+      {InheritMod, :handle_call, 3} => %ModFunInfo{
+        params: [
+          [
+            {:msg, _, ElixirSenseExample.ExampleBehaviour},
+            {:_from, _, ElixirSenseExample.ExampleBehaviour},
+            {:state, _, ElixirSenseExample.ExampleBehaviour}
+          ]
+        ],
+        positions: [{2, 3}],
+        type: :def
+      },
+      {InheritMod, :handle_call, nil} => %ModFunInfo{},
+      {InheritMod, nil, nil} => %ModFunInfo{
+        params: [nil, nil],
+        positions: [{2, 3}, {1, 11}],
+        type: :defmodule
+      },
+      {InheritMod, :private_func, 0} => %ModFunInfo{
+        params: [[]],
+        positions: [{2, 3}],
+        type: :defp
+      },
+      {InheritMod, :private_func_arg, 1} => %ModFunInfo{
+        params: [
+          [{:\\, _, [{:a, _, ElixirSenseExample.ExampleBehaviour}, nil]}],
+          [{:a, _, ElixirSenseExample.ExampleBehaviour}]
+        ],
+        positions: [{2, 3}, {2, 3}],
+        type: :defp
+      },
+      {InheritMod, :private_guard, 0} => %ModFunInfo{
+        params: [[]],
+        positions: [{2, 3}],
+        type: :defguardp
+      },
+      {InheritMod, :private_guard_arg, 1} => %ModFunInfo{
+        params: [
+          [
+            {:a, _, ElixirSenseExample.ExampleBehaviour}
+          ]
+        ],
+        positions: [{2, 3}],
+        type: :defguardp
+      },
+      {InheritMod, :private_macro, 0} => %ModFunInfo{
+        params: [[]],
+        positions: [{2, 3}],
+        type: :defmacrop
+      },
+      {InheritMod, :private_macro_arg, 1} => %ModFunInfo{
+        params: [
+          [
+            {:a, _, ElixirSenseExample.ExampleBehaviour}
+          ]
+        ],
+        positions: [{2, 3}],
+        type: :defmacrop
+      },
+      {InheritMod, :public_func, 0} => %ModFunInfo{
+        params: [[]],
+        positions: [{2, 3}],
+        type: :def,
+        overridable: {true, ElixirSenseExample.ExampleBehaviour}
+      },
+      {InheritMod, :public_func_arg, 2} => %ModFunInfo{
+        params: [
+          [
+            {:b, _, ElixirSenseExample.ExampleBehaviour},
+            {:\\, [keep: {path, 121}],
+             [
+               {:a, _, ElixirSenseExample.ExampleBehaviour},
+               "def"
+             ]}
+          ]
+        ],
+        positions: [{2, 3}],
+        type: :def
+      },
+      {InheritMod, :public_guard, 0} => %ModFunInfo{
+        params: [[]],
+        positions: [{2, 3}],
+        type: :defguard
+      },
+      {InheritMod, :public_guard_arg, 1} => %ModFunInfo{
+        params: [
+          [
+            {:a, _, ElixirSenseExample.ExampleBehaviour}
+          ]
+        ],
+        positions: [{2, 3}],
+        type: :defguard
+      },
+      {InheritMod, :public_macro, 0} => %ModFunInfo{
+        params: [[]],
+        positions: [{2, 3}],
+        type: :defmacro
+      },
+      {InheritMod, :public_macro_arg, 1} => %ModFunInfo{
+        params: [
+          [
+            {:a, _, ElixirSenseExample.ExampleBehaviour}
+          ]
+        ],
+        positions: [{2, 3}],
+        type: :defmacro
+      },
+      {InheritMod.Deeply.Nested, nil, nil} => %ModFunInfo{
+        params: [nil],
+        positions: [{2, 3}],
+        type: :defmodule
+      },
+      {InheritMod.Nested, nil, nil} => %ModFunInfo{
+        params: [nil],
+        positions: [{2, 3}],
+        type: :defmodule
+      },
+      {InheritMod.ProtocolEmbedded, nil, nil} => %ModFunInfo{
+        params: [nil],
+        positions: [{2, 3}],
+        type: :defmodule
+      },
+      {InheritMod, :behaviour_info, 1} => %ModFunInfo{
+        params: [[{:atom, [line: 2, column: 3], nil}]],
+        positions: [{2, 3}],
+        target: nil,
+        type: :def
+      },
+      {InheritMod.ProtocolEmbedded, :module_info, 1} => %ModFunInfo{}
+    } = state.mods_funs_to_positions
+
+    assert path =~ "test/support/example_behaviour.ex"
 
     assert %{
              {InheritMod, :my_opaque_type, 0} => %State.TypeInfo{
