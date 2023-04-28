@@ -410,13 +410,15 @@ defmodule ElixirSense.Core.ParserTest do
     assert %ElixirSense.Core.Metadata{
              lines_to_env: %{
                5 => %ElixirSense.Core.State.Env{
-                 vars: [
-                   %ElixirSense.Core.State.VarInfo{name: :x},
-                   %ElixirSense.Core.State.VarInfo{name: :y}
-                 ]
+                 vars: vars
                }
              }
            } = parse_string(source, true, true, 5)
+
+    assert [
+             %ElixirSense.Core.State.VarInfo{name: :x},
+             %ElixirSense.Core.State.VarInfo{name: :y}
+           ] = Enum.sort(vars)
   end
 
   test "parse struct" do
