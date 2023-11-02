@@ -813,7 +813,7 @@ defmodule ElixirSense.Providers.Suggestion.Complete do
                 Matcher.match?(module_part, hint)
               end)
               |> Enum.reduce(acc, fn {module_part, index}, acc1 ->
-                required_alias = Enum.slice(module_parts, 0..index)
+                required_alias = Enum.slice(module_parts, 0..index//1)
                 required_alias = required_alias |> Module.concat() |> Atom.to_string()
 
                 [{module_part, required_alias} | acc1]
