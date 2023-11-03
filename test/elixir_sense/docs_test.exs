@@ -195,13 +195,13 @@ defmodule ElixirSense.DocsTest do
     test "existing module with no docs" do
       buffer = """
       defmodule MyModule do
-        raise ArgumentError, "Error"
+        raise BadStructError, "Error"
       end
       """
 
       %{docs: [doc]} = ElixirSense.docs(buffer, 2, 11)
 
-      assert doc == %{module: ArgumentError, metadata: %{}, docs: "", kind: :module}
+      assert doc == %{module: BadStructError, metadata: %{}, docs: "", kind: :module}
     end
 
     test "not existing module docs" do
