@@ -10,8 +10,6 @@ defmodule ElixirSense.Core.Parser do
   alias ElixirSense.Core.State
   require Logger
 
-  @dialyzer {:nowarn_function, normalize_error: 1}
-
   @spec parse_file(String.t(), boolean, boolean, pos_integer | nil) :: Metadata.t()
   def parse_file(file, try_to_fix_parse_error, try_to_fix_line_not_found, cursor_line_number) do
     case File.read(file) do
@@ -114,7 +112,7 @@ defmodule ElixirSense.Core.Parser do
       error ->
         if errors_threshold > 0 do
           source
-          |> fix_parse_error(cursor_line_number, normalize_error(error))
+          |> fix_parse_error(cursor_line_number, error)
           |> string_to_ast(
             errors_threshold - 1,
             cursor_line_number,
@@ -127,10 +125,33 @@ defmodule ElixirSense.Core.Parser do
     end
   end
 
-  defp normalize_error({:error, {[line: line, column: _column], msg, detail}}),
-    do: {:error, {line, msg, detail}}
+  defp fix_parse_error(source, cursor_line_number, {:error, {[opening_delimiter: :"(", line: line_number, column: _column], msg, token}}) do
+    terminator = ")"
+    source
+      |> Source.split_lines()
+      |> List.update_at(cursor_line_number - 1, fn line ->
+        if cursor_line_number != line_number do
+          # try to close the line with with missing terminator
+          line <> " " <> terminator
+        else
+          # try to prepend first occurence of unexpected token with missing terminator
+          line
+          |> String.replace(token, terminator <> " " <> token, global: false)
+        end
+      end)
+      |> Enum.join("\n")
+  end
 
-  defp fix_parse_error(
+  defp fix_parse_error(source, cursor_line_number, {:error, {[opening_delimiter: delim, line: line, column: _column], msg, detail}}) do
+    do_fix_parse_error(source, cursor_line_number, {:error, {line, msg, detail}})
+  end
+
+  defp fix_parse_error(source, cursor_line_number, {:error, {meta, msg, detail}}) do
+    do_fix_parse_error(source, cursor_line_number, {:error, {Keyword.fetch!(meta, :line), msg, detail}})
+  end
+
+    # Fix missing terminator
+  defp do_fix_parse_error(
          source,
          _cursor_line_number,
          {:error, {line, {"\"" <> <<_::bytes-size(1)>> <> "\" is missing terminator" <> _, _}, _}}
@@ -140,7 +161,7 @@ defmodule ElixirSense.Core.Parser do
     |> replace_line_with_marker(line)
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          _cursor_line_number,
          {:error, {line_number, {message, _}, "do"}}
@@ -156,7 +177,7 @@ defmodule ElixirSense.Core.Parser do
     |> Enum.join("\n")
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          cursor_line_number,
          {:error, {line_number, {message, text}, token}}
@@ -195,7 +216,7 @@ defmodule ElixirSense.Core.Parser do
     end
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          _cursor_line_number,
          {:error, {line_number, "syntax" <> _, terminator_quoted}}
@@ -213,7 +234,7 @@ defmodule ElixirSense.Core.Parser do
     |> Enum.join("\n")
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          _cursor_line_number,
          {:error, {line_number, "unexpected expression after keyword list" <> _, token}}
@@ -231,7 +252,7 @@ defmodule ElixirSense.Core.Parser do
     |> Enum.join("\n")
   end
 
-  defp fix_parse_error(source, _cursor_line_number, {:error, {line, "syntax" <> _, token}})
+  defp do_fix_parse_error(source, _cursor_line_number, {:error, {line, "syntax" <> _, token}})
        when is_integer(line) do
     case source
          |> Source.split_lines()
@@ -254,7 +275,7 @@ defmodule ElixirSense.Core.Parser do
     end
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          _cursor_line_number,
          {:error, {line, "unexpected operator" <> _, _token}}
@@ -263,11 +284,11 @@ defmodule ElixirSense.Core.Parser do
     remove_line(source, line)
   end
 
-  defp fix_parse_error(_, nil, error) do
+  defp do_fix_parse_error(_, nil, error) do
     error
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          cursor_line_number,
          {:error, {line_end, text = "missing terminator: " <> _, _}}
@@ -351,7 +372,7 @@ defmodule ElixirSense.Core.Parser do
     end
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          cursor_line_number,
          {:error, {_line_end, text = "missing interpolation terminator: \"}\"" <> _, _}}
@@ -371,7 +392,7 @@ defmodule ElixirSense.Core.Parser do
     |> Enum.join("\n")
   end
 
-  defp fix_parse_error(source, cursor_line_number, _error) when is_integer(cursor_line_number) do
+  defp do_fix_parse_error(source, cursor_line_number, _error) when is_integer(cursor_line_number) do
     source
     |> replace_line_with_marker(cursor_line_number)
   end
