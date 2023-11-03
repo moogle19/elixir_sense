@@ -81,6 +81,10 @@ defmodule ElixirSense.Providers.Suggestion.Complete do
       end
 
     case NormalizedCode.Fragment.cursor_context(code) do
+      # TODO handle {:anonymous_call, inside_caller} on 1.16+
+      {:anonymous_call, {_type, _var}} ->
+        no()
+
       {:alias, hint} when is_list(hint) ->
         expand_aliases(List.to_string(hint), env, metadata, cursor_position, false, opts)
 

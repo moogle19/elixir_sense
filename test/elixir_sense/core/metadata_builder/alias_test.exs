@@ -18,6 +18,7 @@ defmodule ElixirSense.Core.MetadataBuilder.AliasTest do
         Alias.AliasOnePart,
         Alias.AliasSubmoduleExternal,
         Alias.AliasSubmoduleExternalInherit,
+        # TODO: Fix this in 1.16
         Alias.AliasSubmoduleExternalWithAlias,
         Alias.AliasSubmoduleExternalWithAliasSpecial,
         Alias.AliasSubmoduleNestedExternal,
