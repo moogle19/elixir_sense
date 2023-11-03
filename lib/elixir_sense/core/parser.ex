@@ -149,7 +149,7 @@ defmodule ElixirSense.Core.Parser do
         source,
         cursor_line_number,
         closing_delimiter,
-        current_closing_delimiter,
+        to_string(current_closing_delimiter),
         current_delimiter_line
       )
     else
