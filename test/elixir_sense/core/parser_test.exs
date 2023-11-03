@@ -249,6 +249,7 @@ defmodule ElixirSense.Core.ParserTest do
            } = result
   end
 
+  @tag this: true
   test "parse_string with missing terminator \"end\" attempts to insert `end` at correct indentation" do
     source = """
     defmodule MyModule do

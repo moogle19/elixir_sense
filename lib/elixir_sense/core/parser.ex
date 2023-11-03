@@ -125,8 +125,16 @@ defmodule ElixirSense.Core.Parser do
     end
   end
 
-  defp fix_parse_error(source, cursor_line_number, {:error, {[opening_delimiter: :"(", line: line_number, column: _column], msg, token}}) do
-    terminator = ")"
+  defp fix_parse_error(source, cursor_line_number, {:error, {[opening_delimiter: delim, line: line_number, column: _column], msg, token}}) do
+    terminator = case delim do
+      :"(" -> ")"
+      :fn -> "end"
+      :do -> "end"
+      :"{" -> "}"
+      :"[" -> "]"
+      :"<<" -> ">>"
+      other -> raise "invalid opening_delimiter: #{inspect(other)}"
+    end
     source
       |> Source.split_lines()
       |> List.update_at(cursor_line_number - 1, fn line ->
@@ -142,12 +150,36 @@ defmodule ElixirSense.Core.Parser do
       |> Enum.join("\n")
   end
 
-  defp fix_parse_error(source, cursor_line_number, {:error, {[opening_delimiter: delim, line: line, column: _column], msg, detail}}) do
-    do_fix_parse_error(source, cursor_line_number, {:error, {line, msg, detail}})
-  end
-
   defp fix_parse_error(source, cursor_line_number, {:error, {meta, msg, detail}}) do
-    do_fix_parse_error(source, cursor_line_number, {:error, {Keyword.fetch!(meta, :line), msg, detail}})
+    if Keyword.has_key?(meta, :opening_delimiter) do
+      delim = Keyword.fetch!(meta, :opening_delimiter)
+      line_number = Keyword.fetch!(meta, :end_line)
+
+      terminator = case delim do
+        :"(" -> ")"
+        :fn -> "end"
+        :do -> "end"
+        :"{" -> "}"
+        :"[" -> "]"
+        :"<<" -> ">>"
+        other -> raise "invalid opening_delimiter: #{inspect(other)}"
+      end
+      source
+        |> Source.split_lines()
+        |> List.update_at(cursor_line_number - 1, fn line ->
+          if cursor_line_number != line_number do
+            # try to close the line with with missing terminator
+            line <> " " <> terminator
+          else
+            # try to prepend first occurence of unexpected token with missing terminator
+            line
+            |> String.replace(detail, terminator <> " " <> detail, global: false)
+          end
+        end)
+        |> Enum.join("\n")
+    else
+      do_fix_parse_error(source, cursor_line_number, {:error, {Keyword.fetch!(meta, :line), msg, detail}})
+    end
   end
 
     # Fix missing terminator
@@ -417,6 +449,7 @@ defmodule ElixirSense.Core.Parser do
     # instead we append marker to the existing line
     |> List.update_at(line_number - 1, &(&1 <> "; " <> marker(line_number)))
     |> Enum.join("\n")
+    |> IO.inspect()
   end
 
   defp replace_line_with_marker(source, line_number) when is_integer(line_number) do
