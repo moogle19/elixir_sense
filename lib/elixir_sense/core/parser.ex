@@ -10,8 +10,6 @@ defmodule ElixirSense.Core.Parser do
   alias ElixirSense.Core.State
   require Logger
 
-  @dialyzer {:nowarn_function, normalize_error: 1}
-
   @spec parse_file(String.t(), boolean, boolean, pos_integer | nil) :: Metadata.t()
   def parse_file(file, try_to_fix_parse_error, try_to_fix_line_not_found, cursor_line_number) do
     case File.read(file) do
@@ -114,7 +112,7 @@ defmodule ElixirSense.Core.Parser do
       error ->
         if errors_threshold > 0 do
           source
-          |> fix_parse_error(cursor_line_number, normalize_error(error))
+          |> fix_parse_error(cursor_line_number, error)
           |> string_to_ast(
             errors_threshold - 1,
             cursor_line_number,
@@ -127,10 +125,41 @@ defmodule ElixirSense.Core.Parser do
     end
   end
 
-  defp normalize_error({:error, {[line: line, column: _column], msg, detail}}),
-    do: {:error, {line, msg, detail}}
+  defp fix_parse_error(
+         source,
+         cursor_line_number,
+         {:error, {[line: line, column: _column], msg, detail}}
+       ),
+       do: do_fix_parse_error(source, cursor_line_number, {:error, {line, msg, detail}})
 
   defp fix_parse_error(
+         source,
+         cursor_line_number,
+         {:error, {[opening_delimiter: _delimiter, line: line, column: _column], msg, detail}}
+       ),
+       do: do_fix_parse_error(source, cursor_line_number, {:error, {line, msg, detail}})
+
+  defp fix_parse_error(source, cursor_line_number, {:error, {meta, _msg, _detail}}) do
+    with {:ok, :mismatched_delimiter} <- Keyword.fetch(meta, :error_type),
+         {:ok, opening_delimiter} <- Keyword.fetch(meta, :opening_delimiter),
+         {:ok, closing_delimiter} <- get_closing_delimiter(opening_delimiter),
+         {:ok, current_closing_delimiter} <- Keyword.fetch(meta, :closing_delimiter),
+         {:ok, current_delimiter_line} <- Keyword.fetch(meta, :end_line) do
+      fix_mismatched_delimiter(
+        source,
+        cursor_line_number,
+        closing_delimiter,
+        current_closing_delimiter,
+        current_delimiter_line
+      )
+    else
+      _ ->
+        source
+        |> replace_line_with_marker(cursor_line_number)
+    end
+  end
+
+  defp do_fix_parse_error(
          source,
          _cursor_line_number,
          {:error, {line, {"\"" <> <<_::bytes-size(1)>> <> "\" is missing terminator" <> _, _}, _}}
@@ -140,7 +169,7 @@ defmodule ElixirSense.Core.Parser do
     |> replace_line_with_marker(line)
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          _cursor_line_number,
          {:error, {line_number, {message, _}, "do"}}
@@ -156,7 +185,7 @@ defmodule ElixirSense.Core.Parser do
     |> Enum.join("\n")
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          cursor_line_number,
          {:error, {line_number, {message, text}, token}}
@@ -170,19 +199,7 @@ defmodule ElixirSense.Core.Parser do
       end
 
     if terminator != nil do
-      source
-      |> Source.split_lines()
-      |> List.update_at(cursor_line_number - 1, fn line ->
-        if cursor_line_number != line_number do
-          # try to close the line with with missing terminator
-          line <> " " <> terminator
-        else
-          # try to prepend first occurence of unexpected token with missing terminator
-          line
-          |> String.replace(token, terminator <> " " <> token, global: false)
-        end
-      end)
-      |> Enum.join("\n")
+      fix_mismatched_delimiter(source, cursor_line_number, terminator, token, line_number)
     else
       source
       |> Source.split_lines()
@@ -195,7 +212,7 @@ defmodule ElixirSense.Core.Parser do
     end
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          _cursor_line_number,
          {:error, {line_number, "syntax" <> _, terminator_quoted}}
@@ -213,7 +230,7 @@ defmodule ElixirSense.Core.Parser do
     |> Enum.join("\n")
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          _cursor_line_number,
          {:error, {line_number, "unexpected expression after keyword list" <> _, token}}
@@ -231,7 +248,7 @@ defmodule ElixirSense.Core.Parser do
     |> Enum.join("\n")
   end
 
-  defp fix_parse_error(source, _cursor_line_number, {:error, {line, "syntax" <> _, token}})
+  defp do_fix_parse_error(source, _cursor_line_number, {:error, {line, "syntax" <> _, token}})
        when is_integer(line) do
     case source
          |> Source.split_lines()
@@ -254,7 +271,7 @@ defmodule ElixirSense.Core.Parser do
     end
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          _cursor_line_number,
          {:error, {line, "unexpected operator" <> _, _token}}
@@ -263,11 +280,11 @@ defmodule ElixirSense.Core.Parser do
     remove_line(source, line)
   end
 
-  defp fix_parse_error(_, nil, error) do
+  defp do_fix_parse_error(_, nil, error) do
     error
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          cursor_line_number,
          {:error, {line_end, text = "missing terminator: " <> _, _}}
@@ -351,7 +368,7 @@ defmodule ElixirSense.Core.Parser do
     end
   end
 
-  defp fix_parse_error(
+  defp do_fix_parse_error(
          source,
          cursor_line_number,
          {:error, {_line_end, text = "missing interpolation terminator: \"}\"" <> _, _}}
@@ -371,10 +388,47 @@ defmodule ElixirSense.Core.Parser do
     |> Enum.join("\n")
   end
 
-  defp fix_parse_error(source, cursor_line_number, _error) when is_integer(cursor_line_number) do
+  defp do_fix_parse_error(source, cursor_line_number, _error)
+       when is_integer(cursor_line_number) do
     source
     |> replace_line_with_marker(cursor_line_number)
   end
+
+  defp fix_mismatched_delimiter(
+         source,
+         cursor_line_number,
+         delimiter,
+         closing_delimiter,
+         line_number
+       ) do
+    source
+    |> Source.split_lines()
+    |> List.update_at(cursor_line_number - 1, fn line ->
+      if cursor_line_number != line_number do
+        # try to close the line with with missing terminator
+        line <> " " <> delimiter
+      else
+        # try to prepend first occurence of unexpected token with missing terminator
+        line
+        |> String.replace(closing_delimiter, delimiter <> " " <> closing_delimiter, global: false)
+      end
+    end)
+    |> Enum.join("\n")
+  end
+
+  @delimiters %{
+    :"(" => ")",
+    :"{" => "}",
+    :"[" => "]",
+    :"<<" => ">>",
+    :do => "end",
+    :fn => "end"
+  }
+
+  defp get_closing_delimiter(opening_delimiter) when is_map_key(@delimiters, opening_delimiter),
+    do: {:ok, @delimiters[opening_delimiter]}
+
+  defp get_closing_delimiter(_opening_delimiter), do: :error
 
   defp compare_intendation(:eq, left, right), do: left == right
   defp compare_intendation(:lt, left, right), do: left < right
